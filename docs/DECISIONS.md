@@ -4,7 +4,7 @@ Fill in and commit. No secrets here: credentials go in Devin secrets / local `.e
 
 | Decision | Value | Status |
 |---|---|---|
-| Deploy path | A (existing server via SSH): runbook in `deploy/path-a/` | decided |
+| Deploy path | B (DigitalOcean, `deploy/path-b/`) to create the droplet, then A (`deploy/path-a/`) | decided |
 | Provider (Path B) or host description (Path A) | | **pending** |
 | Region / location | | **pending** |
 | Server size | 2 vCPU / 2 GB RAM / 25 GB+ | proposed |
