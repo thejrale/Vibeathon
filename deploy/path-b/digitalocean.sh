@@ -18,6 +18,10 @@ ADMIN_EMAIL="${ADMIN_EMAIL:?set ADMIN_EMAIL}"
 
 droplet_id() { doctl compute droplet list --tag-name "$TAG" --format ID,Name --no-header | awk -v n="$NAME" '$2==n{print $1}'; }
 
+# Keeps other keys (CENTRAL_VERSION, BACKUP_TARGET, a custom domain) on re-runs.
+set_env() { grep -v "^$1=" "$ENV_OUT" > "$ENV_OUT.tmp" || true; echo "$1=$2" >> "$ENV_OUT.tmp"; mv "$ENV_OUT.tmp" "$ENV_OUT"; chmod 600 "$ENV_OUT"; }
+set_env_if_missing() { grep -q "^$1=." "$ENV_OUT" || set_env "$1" "$2"; }
+
 up() {
   [ -f "$SSH_KEY_PATH" ] || ssh-keygen -q -t ed25519 -N "" -C "$NAME-operator" -f "$SSH_KEY_PATH"
   pub="$(cat "$SSH_KEY_PATH.pub")"
@@ -54,15 +58,13 @@ CLOUD
     sleep 5
   done
 
-  cat > "$ENV_OUT" <<ENV
-CENTRAL_DOMAIN=${ip//./-}.sslip.io
-ADMIN_EMAIL=$ADMIN_EMAIL
-SERVER_IP=$ip
-SSH_USER=$OPERATOR_USER
-SSH_KEY_PATH=$SSH_KEY_PATH
-ENV
-  chmod 600 "$ENV_OUT"
-  echo "Droplet ready: $ip  (domain ${ip//./-}.sslip.io)"
+  touch "$ENV_OUT" && chmod 600 "$ENV_OUT"
+  set_env SERVER_IP "$ip"
+  set_env SSH_USER "$OPERATOR_USER"
+  set_env SSH_KEY_PATH "$SSH_KEY_PATH"
+  set_env_if_missing CENTRAL_DOMAIN "${ip//./-}.sslip.io"
+  set_env_if_missing ADMIN_EMAIL "$ADMIN_EMAIL"
+  echo "Droplet ready: $ip  (domain $(grep '^CENTRAL_DOMAIN=' "$ENV_OUT" | cut -d= -f2-))"
   echo "Next: ../path-a/run.sh all"
 }
 
