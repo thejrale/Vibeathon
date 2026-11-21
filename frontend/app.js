@@ -62,6 +62,18 @@
     }
   }
   presentBtn.addEventListener('click', () => togglePresent());
+  document.getElementById('prevSlide').addEventListener('click', () => go(current - 1));
+  document.getElementById('nextSlide').addEventListener('click', () => go(current + 1));
+  document.getElementById('exitPresent').addEventListener('click', () => togglePresent(false));
+
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a || !document.body.classList.contains('presenting')) return;
+    const i = slides.findIndex(s => '#' + s.id === a.hash);
+    if (i < 0) return;
+    e.preventDefault();
+    go(i);
+  });
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement && document.body.classList.contains('presenting')) togglePresent(false);
   });
@@ -69,6 +81,7 @@
   document.addEventListener('keydown', e => {
     if (e.target.closest('input,textarea')) return;
     const k = e.key;
+    if (k === ' ' && e.target.closest('button,a')) return;
     if (k === 'p' || k === 'P') return togglePresent();
     if (k === 'Escape' && document.body.classList.contains('presenting')) return togglePresent(false);
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); go(current + 1); }
