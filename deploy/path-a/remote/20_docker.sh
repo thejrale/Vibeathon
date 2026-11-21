@@ -3,7 +3,7 @@
 set -euo pipefail
 SSH_USER="$1"
 export DEBIAN_FRONTEND=noninteractive
-if ! command -v docker >/dev/null; then
+if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
   install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
