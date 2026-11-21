@@ -9,7 +9,10 @@ id "$user" >/dev/null 2>&1 || useradd -m -s /bin/bash "$user"
 home="$(getent passwd "$user" | cut -d: -f6)"
 install -d -m 700 -o "$user" -g "$user" "$home/.ssh"
 touch "$home/.ssh/authorized_keys"
-grep -qxF "$pubkey" "$home/.ssh/authorized_keys" || echo "$pubkey" >> "$home/.ssh/authorized_keys"
+if ! grep -qxF "$pubkey" "$home/.ssh/authorized_keys"; then
+  [ -z "$(tail -c1 "$home/.ssh/authorized_keys")" ] || echo >> "$home/.ssh/authorized_keys"
+  echo "$pubkey" >> "$home/.ssh/authorized_keys"
+fi
 chown "$user:$user" "$home/.ssh/authorized_keys"; chmod 600 "$home/.ssh/authorized_keys"
 echo "OK $user can log in with the key"
 
