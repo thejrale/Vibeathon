@@ -16,7 +16,13 @@ SSH_KEY_PATH="${SSH_KEY_PATH:-$HOME/.ssh/eira_central}"
 ENV_OUT="${ENV_OUT:-$HERE/../.env}"
 ADMIN_EMAIL="${ADMIN_EMAIL:?set ADMIN_EMAIL}"
 
-droplet_id() { doctl compute droplet list --tag-name "$TAG" --format ID,Name --no-header | awk -v n="$NAME" '$2==n{print $1}'; }
+droplet_id() {
+  local out ids
+  out="$(doctl compute droplet list --tag-name "$TAG" --format ID,Name --no-header)" || { echo "FAIL could not list droplets" >&2; return 1; }
+  ids="$(awk -v n="$NAME" '$2==n{print $1}' <<<"$out")"
+  [ "$(grep -c . <<<"$ids")" -le 1 ] || { echo "FAIL several droplets named $NAME: $ids" >&2; return 1; }
+  echo "$ids"
+}
 
 # Keeps other keys (CENTRAL_VERSION, BACKUP_TARGET, a custom domain) on re-runs.
 set_env() { grep -v "^$1=" "$ENV_OUT" > "$ENV_OUT.tmp" || true; echo "$1=$2" >> "$ENV_OUT.tmp"; mv "$ENV_OUT.tmp" "$ENV_OUT"; chmod 600 "$ENV_OUT"; }
@@ -29,7 +35,8 @@ up() {
   doctl compute ssh-key get "$fp" >/dev/null 2>&1 || doctl compute ssh-key import "$NAME-operator" --public-key-file "$SSH_KEY_PATH.pub" >/dev/null
   doctl compute tag create "$TAG" >/dev/null 2>&1 || true
 
-  if [ -z "$(droplet_id)" ]; then
+  id="$(droplet_id)"
+  if [ -z "$id" ]; then
     userdata="$(mktemp)"
     cat > "$userdata" <<CLOUD
 #cloud-config
@@ -51,7 +58,8 @@ CLOUD
       --outbound-rules "protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0 protocol:icmp,address:0.0.0.0/0,address:::/0" >/dev/null
   fi
 
-  ip="$(doctl compute droplet get "$(droplet_id)" --format PublicIPv4 --no-header)"
+  id="$(droplet_id)"
+  ip="$(doctl compute droplet get "$id" --format PublicIPv4 --no-header)"
   echo "Waiting for SSH as $OPERATOR_USER@$ip ..."
   for _ in $(seq 1 60); do
     ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 "$OPERATOR_USER@$ip" 'cloud-init status --wait >/dev/null; sudo -n true' 2>/dev/null && break
@@ -76,7 +84,8 @@ status() {
 down() {
   read -r -p "Delete droplet '$NAME' and firewall '$NAME-fw'? All Central data on it is lost. Type the droplet name: " ans
   [ "$ans" = "$NAME" ] || { echo "aborted"; exit 1; }
-  id="$(droplet_id)"; [ -n "$id" ] && doctl compute droplet delete "$id" --force
+  id="$(droplet_id)"
+  if [ -n "$id" ]; then doctl compute droplet delete "$id" --force; fi
   fw="$(doctl compute firewall list --format ID,Name --no-header | awk -v n="$NAME-fw" '$2==n{print $1}')"; [ -n "$fw" ] && doctl compute firewall delete "$fw" --force
   echo "deleted"
 }
