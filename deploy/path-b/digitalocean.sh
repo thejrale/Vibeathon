@@ -61,10 +61,12 @@ CLOUD
   id="$(droplet_id)"
   ip="$(doctl compute droplet get "$id" --format PublicIPv4 --no-header)"
   echo "Waiting for SSH as $OPERATOR_USER@$ip ..."
+  ready=0
   for _ in $(seq 1 60); do
-    ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 "$OPERATOR_USER@$ip" 'cloud-init status --wait >/dev/null; sudo -n true' 2>/dev/null && break
+    if ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 "$OPERATOR_USER@$ip" 'cloud-init status --wait >/dev/null; sudo -n true' 2>/dev/null; then ready=1; break; fi
     sleep 5
   done
+  [ "$ready" = 1 ] || { echo "FAIL no SSH + sudo as $OPERATOR_USER@$ip after 5 minutes"; exit 1; }
 
   touch "$ENV_OUT" && chmod 600 "$ENV_OUT"
   set_env SERVER_IP "$ip"
