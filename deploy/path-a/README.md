@@ -2,6 +2,8 @@
 
 Runs from your laptop (or Devin's VM) over SSH. All server work happens with `sudo` on the target.
 
+No server yet? Follow [CREATE_VPS.md](CREATE_VPS.md) first.
+
 ## Requirements
 
 - Ubuntu 22.04/24.04 x86_64, 2 vCPU, 2 GB RAM, 20 GB+ free disk, static public IPv4
