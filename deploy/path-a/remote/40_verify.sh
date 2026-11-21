@@ -7,12 +7,14 @@ docker compose ps
 echo "== Service states"
 for svc in $(docker compose config --services); do
   id=$(docker compose ps -aq "$svc")
-  [ -z "$id" ] && continue
+  if [ -z "$id" ]; then echo "FAIL $svc: no container"; fail=1; continue; fi
   state=$(docker inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}} exit={{.State.ExitCode}}' "$id")
   echo "$svc: $state"
   case "$svc:$state" in
     postgres:exited*exit=0|secrets:exited*exit=0) ;;   # one-shot jobs
-    *:running*unhealthy*|*:exited*|*:restarting*) echo "FAIL $svc"; fail=1 ;;
+    *:running*unhealthy*|*:running*starting*) echo "FAIL $svc"; fail=1 ;;
+    *:running*) ;;
+    *) echo "FAIL $svc"; fail=1 ;;
   esac
 done
 echo "== Postgres exposure"
