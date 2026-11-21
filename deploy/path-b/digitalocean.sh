@@ -2,6 +2,7 @@
 # Path B (DigitalOcean): create the droplet + cloud firewall, then hand over to Path A.
 # Usage: DIGITALOCEAN_TOKEN=... ./digitalocean.sh up|status|down
 set -euo pipefail
+umask 077   # .env, temp copies and keys stay private
 HERE="$(cd "$(dirname "$0")" && pwd)"
 : "${DIGITALOCEAN_TOKEN:?set DIGITALOCEAN_TOKEN}"
 export DIGITALOCEAN_ACCESS_TOKEN="$DIGITALOCEAN_TOKEN"
