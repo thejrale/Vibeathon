@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EIRA · Arquitectura offline-first y eficiente en energía</title>
+<meta name="description" content="Arquitectura de 3 capas offline-first para captura de datos en tablets con SQLite, Valkey y ODK Central (Apache 2.0).">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="topbar" aria-label="Secciones">
+  <a class="brand" href="#inicio"><span class="logo">EIRA</span> offline-first</a>
+  <ul>
+    <li><a href="#capas">Arquitectura</a></li>
+    <li><a href="#flujo">Sincronización</a></li>
+    <li><a href="#energia">Energía</a></li>
+    <li><a href="#usuarios">Usuarios</a></li>
+    <li><a href="#stack">Stack y licencias</a></li>
+  </ul>
+  <button id="presentBtn" class="btn ghost" type="button" title="Modo presentación (P)">▶ Presentar</button>
+</nav>
+
+<main>
+<!-- 1. HERO -->
+<section id="inicio" class="slide hero">
+  <div class="hero-text">
+    <p class="eyebrow">Vibeathon · Nerdearla</p>
+    <h1>Captura de datos clínicos <em>sin depender de la red</em> y sin agotar la batería</h1>
+    <p class="lead">Arquitectura de <strong>3 capas</strong> offline-first: tablets con <strong>SQLite</strong> local, sincronización <strong>asíncrona</strong> con <strong>Valkey</strong> y un servidor central <strong>ODK Central</strong> para formularios de <strong>ODK Collect</strong> (Apache 2.0).</p>
+    <div class="cta">
+      <a class="btn" href="#capas">Ver arquitectura</a>
+      <a class="btn ghost" href="#usuarios">Roles de usuario</a>
+    </div>
+    <ul class="kpis">
+      <li><b>100%</b><span>funcional sin conexión</span></li>
+      <li><b>3</b><span>capas desacopladas</span></li>
+      <li><b>0</b><span>licencias propietarias</span></li>
+    </ul>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="tablet">
+      <div class="screen">
+        <div class="status"><span class="dot off"></span> Sin conexión · 12 formularios en cola</div>
+        <div class="field"></div><div class="field short"></div><div class="field"></div>
+        <div class="pill">Guardado en SQLite ✓</div>
+      </div>
+    </div>
+    <div class="pulse"></div>
+  </div>
+</section>
+
+<!-- 2. 3 CAPAS -->
+<section id="capas" class="slide">
+  <header class="section-head">
+    <p class="eyebrow">Arquitectura</p>
+    <h2>Tres capas, cada una funciona aunque la siguiente no esté disponible</h2>
+  </header>
+
+  <div class="layers">
+    <article class="layer l1" tabindex="0">
+      <div class="layer-tag">Capa 1 · Dispositivo</div>
+      <h3>Tablets Android + ODK Collect</h3>
+      <ul>
+        <li><b>SQLite</b> local: formularios, borradores y envíos pendientes.</li>
+        <li>Patrón <b>store-and-forward</b>: se guarda primero, se envía después.</li>
+        <li>Validaciones y lógica de saltos ejecutadas en el dispositivo.</li>
+        <li>Datos cifrados en reposo con la clave pública del proyecto.</li>
+      </ul>
+      <div class="chips"><span>ODK Collect</span><span>SQLite</span><span>Android</span></div>
+    </article>
+
+    <div class="link" aria-hidden="true"><span>HTTPS · OpenRosa<br>cuando hay Wi-Fi</span></div>
+
+    <article class="layer l2" tabindex="0">
+      <div class="layer-tag">Capa 2 · Sincronización asíncrona</div>
+      <h3>Valkey: colas, caché y control de flujo</h3>
+      <ul>
+        <li><b>Valkey Streams</b> como cola de eventos de envío (entrada idempotente por <code>instanceID</code>).</li>
+        <li>Workers consumen la cola en lotes: exportaciones, notificaciones, integraciones.</li>
+        <li>Caché de manifiestos de formularios y respuestas frecuentes.</li>
+        <li>Reintentos con <i>backoff</i> exponencial; nada se pierde si Central está ocupado.</li>
+      </ul>
+      <div class="chips"><span>Valkey</span><span>Streams</span><span>Workers</span></div>
+    </article>
+
+    <div class="link" aria-hidden="true"><span>API REST / OData<br>en lotes</span></div>
+
+    <article class="layer l3" tabindex="0">
+      <div class="layer-tag">Capa 3 · Servidor central</div>
+      <h3>ODK Central + PostgreSQL</h3>
+      <ul>
+        <li>Fuente de verdad: proyectos, formularios, envíos y usuarios.</li>
+        <li>PostgreSQL privado (sin puerto público) con respaldos diarios fuera del servidor.</li>
+        <li>Exportación CSV / OData para análisis.</li>
+        <li>Docker Compose, HTTPS con Let's Encrypt.</li>
+      </ul>
+      <div class="chips"><span>ODK Central</span><span>PostgreSQL</span><span>Docker</span></div>
+    </article>
+  </div>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 960 230" role="img" aria-labelledby="dgTitle">
+      <title id="dgTitle">Diagrama: tablets con SQLite envían a Valkey de forma asíncrona y Valkey alimenta ODK Central con PostgreSQL</title>
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <g class="node n1">
+        <rect x="10" y="20" width="250" height="190" rx="18"/>
+        <text x="135" y="52" class="t">Tablets</text>
+        <rect x="35" y="70" width="90" height="120" rx="10" class="dev"/>
+        <rect x="145" y="70" width="90" height="120" rx="10" class="dev"/>
+        <text x="80" y="135" class="s">SQLite</text>
+        <text x="190" y="135" class="s">SQLite</text>
+      </g>
+      <g class="node n2">
+        <rect x="355" y="20" width="250" height="190" rx="18"/>
+        <text x="480" y="52" class="t">Valkey</text>
+        <g class="queue">
+          <rect x="385" y="95" width="34" height="40" rx="6"/><rect x="425" y="95" width="34" height="40" rx="6"/>
+          <rect x="465" y="95" width="34" height="40" rx="6"/><rect x="505" y="95" width="34" height="40" rx="6"/>
+          <rect x="545" y="95" width="34" height="40" rx="6"/>
+        </g>
+        <text x="480" y="170" class="s">Stream de envíos · caché</text>
+      </g>
+      <g class="node n3">
+        <rect x="700" y="20" width="250" height="190" rx="18"/>
+        <text x="825" y="52" class="t">ODK Central</text>
+        <ellipse cx="825" cy="105" rx="55" ry="14" class="db"/>
+        <path d="M770 105 v55 a55 14 0 0 0 110 0 v-55" class="db"/>
+        <text x="825" y="145" class="s">PostgreSQL</text>
+      </g>
+      <path d="M265 115 H350" class="flow" marker-end="url(#arr)"/>
+      <path d="M610 115 H695" class="flow" marker-end="url(#arr)"/>
+      <path d="M695 185 C640 225 320 225 265 185" class="flow back" marker-end="url(#arr)"/>
+      <text x="480" y="226" class="s small">formularios actualizados (pull periódico)</text>
+    </svg>
+  </figure>
+</section>
+
+<!-- 3. FLUJO ASINCRONO -->
+<section id="flujo" class="slide">
+  <header class="section-head">
+    <p class="eyebrow">Sincronización asíncrona</p>
+    <h2>Del campo al servidor sin bloquear al usuario</h2>
+  </header>
+  <ol class="timeline">
+    <li><span class="step">1</span><div><h4>Captura offline</h4><p>El clínico llena el formulario en modo avión. Cada respuesta se escribe en SQLite con un <code>instanceID</code> (UUID) único.</p></div></li>
+    <li><span class="step">2</span><div><h4>Finalizar y encolar</h4><p>El envío queda marcado como <i>finalizado</i> en la cola local. El usuario sigue trabajando; no hay espera.</p></div></li>
+    <li><span class="step">3</span><div><h4>Ventana de sincronización</h4><p>Solo con Wi-Fi (y opcionalmente cargando), Collect envía en lote vía HTTPS. Si falla, reintenta más tarde.</p></div></li>
+    <li><span class="step">4</span><div><h4>Ingesta idempotente</h4><p>Central rechaza duplicados por <code>instanceID</code>; el evento se publica en un Stream de Valkey (<code>XADD</code>).</p></div></li>
+    <li><span class="step">5</span><div><h4>Procesamiento en segundo plano</h4><p>Workers (<code>XREADGROUP</code>) generan exportaciones, alertas e integraciones con confirmación (<code>XACK</code>) y reintentos.</p></div></li>
+    <li><span class="step">6</span><div><h4>Actualización de formularios</h4><p>Las tablets descargan nuevas versiones del formulario la próxima vez que se conectan.</p></div></li>
+  </ol>
+
+  <div class="sim" aria-live="polite">
+    <div class="sim-head">
+      <h3>Simulador</h3>
+      <div class="sim-controls">
+        <button class="btn small" id="simCapture" type="button">+ Capturar registro</button>
+        <button class="btn small ghost" id="simNet" type="button" aria-pressed="false">Wi-Fi: apagado</button>
+        <button class="btn small ghost" id="simReset" type="button">Reiniciar</button>
+      </div>
+    </div>
+    <div class="sim-grid">
+      <div class="sim-col"><h5>Tablet · SQLite</h5><div class="bucket" id="bTablet"></div><small id="cTablet">0 pendientes</small></div>
+      <div class="sim-col"><h5>Valkey · Stream</h5><div class="bucket" id="bQueue"></div><small id="cQueue">0 en cola</small></div>
+      <div class="sim-col"><h5>ODK Central · PostgreSQL</h5><div class="bucket" id="bServer"></div><small id="cServer">0 almacenados</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. ENERGIA -->
+<section id="energia" class="slide">
+  <header class="section-head">
+    <p class="eyebrow">Eficacia energética</p>
+    <h2>Menos radio encendida, menos CPU despierta, más horas de jornada</h2>
+  </header>
+  <div class="cards">
+    <article class="card"><div class="ico">📶</div><h4>Radio bajo demanda</h4><p>Envío automático <b>solo en Wi-Fi</b>. Sin sondeos constantes a la red móvil, que es lo que más consume en una tablet.</p></article>
+    <article class="card"><div class="ico">📦</div><h4>Envío en lotes</h4><p>Agrupar registros en una sola ventana de conexión evita despertar el módem muchas veces; la radio se apaga antes.</p></article>
+    <article class="card"><div class="ico">💾</div><h4>Escrituras locales baratas</h4><p>SQLite en el dispositivo: una escritura local cuesta mucho menos que una petición de red por cada campo.</p></article>
+    <article class="card"><div class="ico">🔋</div><h4>Respeta el sistema</h4><p>Sincronización programada por Android (WorkManager) que agrupa tareas y respeta Doze y ahorro de batería.</p></article>
+    <article class="card"><div class="ico">⚡</div><h4>Servidor dimensionado</h4><p>Un VPS de 2 vCPU / 2 GB basta. Valkey en memoria absorbe picos, así Central no se sobredimensiona.</p></article>
+    <article class="card"><div class="ico">🌙</div><h4>Trabajo diferido</h4><p>Exportaciones y respaldos en horarios de baja carga; los workers duermen cuando la cola está vacía (lectura bloqueante).</p></article>
+  </div>
+  <div class="energy-compare">
+    <h3>Perfil de consumo de la radio (ilustrativo)</h3>
+    <div class="bars">
+      <div class="bar-row"><span>Online-first (petición por registro)</span><div class="bar"><i style="--w:92%"></i></div></div>
+      <div class="bar-row"><span>Offline-first + lotes en Wi-Fi</span><div class="bar good"><i style="--w:28%"></i></div></div>
+    </div>
+    <p class="note">Comparación cualitativa del tiempo con radio activa; no es una medición.</p>
+  </div>
+</section>
+
+<!-- 5. USUARIOS -->
+<section id="usuarios" class="slide">
+  <header class="section-head">
+    <p class="eyebrow">Usuarios</p>
+    <h2>Cada persona ve y hace solo lo que necesita</h2>
+  </header>
+  <div class="users">
+    <article class="user"><div class="avatar a1">👩‍⚕️</div><h4>Clínico / encuestador</h4><p class="role">App User de Central</p><ul><li>Usa la tablet con ODK Collect, configurada por QR.</li><li>Captura offline y envía al tener Wi-Fi.</li><li>No ve datos de otras tablets.</li></ul></article>
+    <article class="user"><div class="avatar a2">🧑‍💼</div><h4>Coordinador de proyecto</h4><p class="role">Project Manager</p><ul><li>Publica y versiona formularios.</li><li>Crea App Users y revoca tablets perdidas.</li><li>Revisa y aprueba envíos.</li></ul></article>
+    <article class="user"><div class="avatar a3">📊</div><h4>Analista de datos</h4><p class="role">Project Viewer</p><ul><li>Solo lectura de envíos.</li><li>Exporta CSV / consume OData.</li><li>Sin acceso a configuración.</li></ul></article>
+    <article class="user"><div class="avatar a4">🛠️</div><h4>Administrador TI</h4><p class="role">Administrator</p><ul><li>Opera el servidor, Valkey y respaldos.</li><li>Gestiona certificados y actualizaciones.</li><li>Monitorea colas y salud del sistema.</li></ul></article>
+  </div>
+  <div class="matrix">
+    <table>
+      <thead><tr><th>Acción</th><th>Clínico</th><th>Coordinador</th><th>Analista</th><th>Admin TI</th></tr></thead>
+      <tbody>
+        <tr><td>Capturar sin conexión</td><td class="y">✓</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Publicar formularios</td><td>—</td><td class="y">✓</td><td>—</td><td class="y">✓</td></tr>
+        <tr><td>Ver / exportar envíos</td><td>—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>Gestionar usuarios</td><td>—</td><td class="y">✓</td><td>—</td><td class="y">✓</td></tr>
+        <tr><td>Operar servidor y Valkey</td><td>—</td><td>—</td><td>—</td><td class="y">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. STACK -->
+<section id="stack" class="slide">
+  <header class="section-head">
+    <p class="eyebrow">Stack y licencias</p>
+    <h2>100% código abierto, sin costos de licencia</h2>
+  </header>
+  <div class="stack">
+    <div class="tech"><h4>ODK Collect</h4><p>App Android de captura offline.</p><span class="lic">Apache 2.0</span></div>
+    <div class="tech"><h4>ODK Central</h4><p>Servidor de formularios, usuarios y envíos.</p><span class="lic">Apache 2.0</span></div>
+    <div class="tech"><h4>SQLite</h4><p>Base de datos embebida en la tablet.</p><span class="lic">Dominio público</span></div>
+    <div class="tech"><h4>Valkey</h4><p>Almacén en memoria para colas y caché (fork abierto de Redis, Linux Foundation).</p><span class="lic">BSD 3-Clause</span></div>
+    <div class="tech"><h4>PostgreSQL</h4><p>Base de datos de Central.</p><span class="lic">PostgreSQL License</span></div>
+    <div class="tech"><h4>XLSForm</h4><p>Definición del formulario en hoja de cálculo.</p><span class="lic">Estándar abierto</span></div>
+  </div>
+  <div class="roadmap">
+    <h3>Ruta de implementación</h3>
+    <ol>
+      <li class="done"><b>MVP</b> Capa 1 + Capa 3: tablets con Collect y ODK Central.</li>
+      <li><b>Fase 2</b> Capa 2: Valkey Streams y workers para exportaciones e integraciones.</li>
+      <li><b>Fase 3</b> Tableros, más clínicas y roles por sede.</li>
+    </ol>
+  </div>
+  <footer class="foot">
+    <p>Proyecto EIRA · Vibeathon Nerdearla · <a href="https://github.com/thejrale/Vibeathon">github.com/thejrale/Vibeathon</a></p>
+    <p class="hint">Atajos: <kbd>P</kbd> presentar · <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>Esc</kbd> salir</p>
+  </footer>
+</section>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
+<div class="dots" id="dots" aria-label="Diapositivas"></div>
+<div class="present-controls" aria-label="Controles de presentación">
+  <button type="button" id="prevSlide" aria-label="Diapositiva anterior">‹</button>
+  <button type="button" id="nextSlide" aria-label="Diapositiva siguiente">›</button>
+  <button type="button" id="exitPresent" aria-label="Salir de la presentación">✕</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
