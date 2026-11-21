@@ -6,14 +6,14 @@ user="$1"; pubkey="$2"; want_sudo="${3:-no}"
 [[ "$pubkey" =~ ^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+|sk-[a-z0-9@.-]+)\ [A-Za-z0-9+/=]+ ]] || { echo "FAIL not an SSH public key"; exit 1; }
 
 id "$user" >/dev/null 2>&1 || useradd -m -s /bin/bash "$user"
-home="$(getent passwd "$user" | cut -d: -f6)"
-install -d -m 700 -o "$user" -g "$user" "$home/.ssh"
+home="$(getent passwd "$user" | cut -d: -f6)"; group="$(id -gn "$user")"
+install -d -m 700 -o "$user" -g "$group" "$home/.ssh"
 touch "$home/.ssh/authorized_keys"
 if ! grep -qxF "$pubkey" "$home/.ssh/authorized_keys"; then
   [ -z "$(tail -c1 "$home/.ssh/authorized_keys")" ] || echo >> "$home/.ssh/authorized_keys"
   echo "$pubkey" >> "$home/.ssh/authorized_keys"
 fi
-chown "$user:$user" "$home/.ssh/authorized_keys"; chmod 600 "$home/.ssh/authorized_keys"
+chown "$user:$group" "$home/.ssh/authorized_keys"; chmod 600 "$home/.ssh/authorized_keys"
 echo "OK $user can log in with the key"
 
 if [ "$want_sudo" = yes ]; then
