@@ -1,4 +1,4 @@
-# EIRA Cytology Capture: MVP Scope
+# EIRA Cytology Capture
 
 ## Scope
 
