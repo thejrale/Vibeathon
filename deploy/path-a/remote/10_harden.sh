@@ -14,13 +14,16 @@ ufw allow 443/tcp
 ufw --force enable
 
 if [ -n "$(cat /home/"$SSH_USER"/.ssh/authorized_keys 2>/dev/null; [ "$SSH_USER" = root ] && cat /root/.ssh/authorized_keys)" ]; then
-  cat > /etc/ssh/sshd_config.d/90-odk-hardening.conf <<CONF
+  rm -f /etc/ssh/sshd_config.d/90-odk-hardening.conf
+  # Sorts before 50-cloud-init.conf etc.: OpenSSH uses the first value it reads.
+  cat > /etc/ssh/sshd_config.d/00-odk-hardening.conf <<CONF
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 $( [ "$SSH_USER" = root ] || echo "PermitRootLogin no" )
 CONF
   sshd -t
   systemctl reload ssh 2>/dev/null || systemctl reload sshd
+  sshd -T | grep -qx "passwordauthentication no" || { echo "FAIL password SSH login still enabled"; exit 1; }
 else
   echo "WARN no authorized_keys for $SSH_USER; leaving SSH auth settings unchanged"
 fi
