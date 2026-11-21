@@ -36,12 +36,18 @@
     else slides[i].scrollIntoView({ behavior: 'smooth' });
   }
 
-  const sectionObs = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting && !document.body.classList.contains('presenting')) setActive(slides.indexOf(e.target));
-    });
-  }, { threshold: 0.45 });
-  slides.forEach(s => sectionObs.observe(s));
+  let scrollRaf = 0;
+  function syncActiveFromScroll() {
+    scrollRaf = 0;
+    if (document.body.classList.contains('presenting')) return;
+    const mid = window.innerHeight / 2;
+    let i = 0;
+    slides.forEach((s, j) => { if (s.getBoundingClientRect().top <= mid) i = j; });
+    if (i !== current || !dots[i].classList.contains('active')) setActive(i);
+  }
+  window.addEventListener('scroll', () => { if (!scrollRaf) scrollRaf = requestAnimationFrame(syncActiveFromScroll); }, { passive: true });
+  window.addEventListener('resize', syncActiveFromScroll);
+  syncActiveFromScroll();
 
   const revealObs = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in-view'); revealObs.unobserve(e.target); } });
