@@ -2,7 +2,10 @@
 # Installs the backup script, rclone, and a daily cron at 02:30 server time.
 set -euo pipefail
 BACKUP_TARGET="${1:-}"
-command -v rclone >/dev/null || { export DEBIAN_FRONTEND=noninteractive; apt-get install -yq rclone; }
+export DEBIAN_FRONTEND=noninteractive
+command -v rclone >/dev/null || apt-get install -yq rclone
+command -v cron >/dev/null || apt-get install -yq cron
+systemctl enable --now cron
 install -m 0700 /tmp/backup.sh /usr/local/sbin/odk-backup && rm -f /tmp/backup.sh
 cat > /etc/odk-backup.conf <<CONF
 BACKUP_TARGET="$BACKUP_TARGET"
