@@ -66,3 +66,5 @@ You should be asked for the password from step 3, then see `SUDO-OK`.
 - Domain: `<ip-with-dashes>.sslip.io` (e.g. `164-90-12-34.sslip.io`) until `piloto-eira.mx` is registered. Switching later means changing `DOMAIN` in `/opt/central/.env` and re-running `./run.sh central`.
 
 `run.sh harden` then turns off password login over SSH. Key-based login and the sudo password keep working.
+
+To give other people their own login later (web or SSH), see [Share access with other people](README.md#share-access-with-other-people).

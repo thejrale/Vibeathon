@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Path A runner: deploys ODK Central to an existing server over SSH.
 # Usage: ./run.sh preflight|harden|docker|central|verify|backup-setup|restore-test|all
+#        ./run.sh add-ssh-user <username> <public-key-file> [--sudo]
+#        ./run.sh add-central-user <email> [admin]
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="${ENV_FILE:-$HERE/../.env}"
@@ -55,5 +57,11 @@ case "${1:-}" in
                 remote_sudo 50_backup_setup.sh "$BACKUP_TARGET" ;;
   restore-test) remote_sudo 60_restore_test.sh ;;
   all)          preflight; "$0" harden; "$0" docker; "$0" central; "$0" verify ;;
-  *) echo "usage: $0 preflight|harden|docker|central|verify|backup-setup|restore-test|all"; exit 2 ;;
+  add-ssh-user) [ $# -ge 3 ] && [ -f "$3" ] || { echo "usage: $0 add-ssh-user <username> <public-key-file> [--sudo]"; exit 2; }
+                remote_sudo 70_add_ssh_user.sh "$2" "$(head -n1 "$3")" "$([ "${4:-}" = --sudo ] && echo yes || echo no)"
+                echo "Share: ssh -i <their private key> $2@$SERVER_IP" ;;
+  add-central-user) [ $# -ge 2 ] || { echo "usage: $0 add-central-user <email> [admin]"; exit 2; }
+                remote_sudo 80_add_central_user.sh "$2" "$([ "${3:-}" = admin ] && echo admin || echo user)"
+                echo "Share: https://$CENTRAL_DOMAIN with that email + temporary password" ;;
+  *) echo "usage: $0 preflight|harden|docker|central|verify|backup-setup|restore-test|all|add-ssh-user|add-central-user"; exit 2 ;;
 esac

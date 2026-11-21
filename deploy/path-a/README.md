@@ -33,7 +33,7 @@ cp deploy/env.example deploy/.env   # git-ignored
 | 8 | `./run.sh backup-setup` | daily `pg_dump` at 02:30 to `/var/backups/odk`, copied with `rclone` to `BACKUP_TARGET` | first dump file listed |
 | 9 | `./run.sh restore-test` | restores latest dump into a throwaway Postgres 14 and compares row counts | `OK restore matches live` |
 
-`./run.sh all` runs steps 1–5. Every step is safe to re-run.
+`./run.sh all` runs steps 1–5. Every step is safe to re-run. For step 6 you can also use `./run.sh add-central-user <email> admin` (below).
 
 ### Create the admin (step 6)
 
@@ -43,6 +43,30 @@ cd /opt/central
 sudo docker compose exec service odk-cmd --email you@example.org user-create   # prompts for password
 sudo docker compose exec service odk-cmd --email you@example.org user-promote
 ```
+
+### Share access with other people
+
+Each person gets their own login. Temporary passwords are printed once; send them privately (not by email in plain text with the username).
+
+**Central web login** (Dra. Rojas, clinicians, data managers):
+
+```bash
+./run.sh add-central-user thejrale@gmail.com admin   # Administrator: manages everything
+./run.sh add-central-user nerd@devin.mx              # plain web user, no project access yet
+```
+
+Then, in the web UI as an Administrator: Projects → EIRA → Project Roles → add the plain user as **Project Manager** or **Data Collector**. Each person changes the temporary password under their name (top right) → Edit profile.
+
+**Server (SSH) login** (technical people only). SSH is key-only, so each person sends you their **public** key (made with `ssh-keygen -t ed25519`, file `~/.ssh/id_ed25519.pub`):
+
+```bash
+./run.sh add-ssh-user ana ana_id_ed25519.pub          # can log in, no admin rights
+./run.sh add-ssh-user ana ana_id_ed25519.pub --sudo   # can also administer the server
+```
+
+With `--sudo` a temporary sudo password is printed; the person must choose a new one the first time they connect with `ssh ana@<IP>`. Re-running adds another key to the same user.
+
+Tablets don't use either of these: they use Central **App Users** + QR code (Phase 3).
 
 ### Off-server backups (step 8)
 
