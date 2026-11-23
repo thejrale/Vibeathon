@@ -1,4 +1,4 @@
-# Vibeathon: EIRA Cytology Capture (ODK MVP)
+# Vibeathon: EIRA Cytology Capture (Building a ODK)
 
 Proyecto generado en Nerdearla durante el vibeathon.
 
